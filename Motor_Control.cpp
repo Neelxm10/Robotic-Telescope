@@ -18,7 +18,7 @@ float degrees;
 
 //Motor Driver
 const int PWMpin = 3; 
-int PWMVal = 75; //0-255 PWM value for speed
+int PWMVal;//0-255 PWM value for speed
 const int MotorA = 5;
 const int MotorB = 6;
 
@@ -44,39 +44,34 @@ void EncoderCheck(){
 }
 
 
-void DriveMotor(int dir, int PWM,int IN1,int IN2, float set) {
+void DriveMotor(int dir, int IN1,int IN2, float set) {
   
   if (dir==1){
-    
-  
-    while(degrees <= set){
-      analogWrite(PWMpin, PWM); // Sets PWM/Speed of Motor
+     
+    //while(degrees <= set){
       digitalWrite(IN1, HIGH);
       digitalWrite(IN2, LOW);
-
+      PWMVal = map(degrees,0,set,255,0);
+      analogWrite(PWMpin, PWMVal); // Sets PWM/Speed of Motor
       Serial.print("Encoder Count: ");
       Serial.println(degrees);
-      
-    }
+    //}
    }
 
   else if(dir==2){
-
-    
-  
-    while(degrees >= set){
-      analogWrite(PWMpin, PWM); // Sets PWM/Speed of Motor
+     
+    // while(degrees >= set){
       digitalWrite(IN1, LOW);
       digitalWrite(IN2, HIGH);
-        
+      PWMVal = map(degrees,0,set,0,255);
+      analogWrite(PWMpin, PWMVal); // Sets PWM/Speed of Motor      
       Serial.print("Encoder Count: ");
       Serial.println(degrees);
-   
-    }
+    //}
   }
   else
   { 
-      analogWrite(PWMpin, PWM);
+      analogWrite(PWMpin, 0);
       digitalWrite(IN1, LOW);
       digitalWrite(IN2, LOW);
   }
@@ -107,21 +102,12 @@ void loop() {
   if (Serial.available() > 0) {
     // Read the first integer input
     input1 = Serial.parseInt();
-    // Read the second integer input
-    //input2 = Serial.parseInt();
+  
 
-    Serial.println(input1);
-
-    DriveMotor(input1, PWMVal, MotorA, MotorB, 180);
-
-
+    DriveMotor(1, MotorA, MotorB, input1);
+    delay(100);
+    
   }
 
-  // DriveMotor(1, PWMVal, MotorA, MotorB, 150);
-  // delay(100);
-  // DriveMotor(2, PWMVal, MotorA, MotorB, 15);
-  // DriveMotor(0, 0, MotorA, MotorB, 0);
-  
-  // while (true){}
-
 }
+
