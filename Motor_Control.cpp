@@ -13,12 +13,12 @@ int input2 = 0;  // Second numerical input
 //Motor Encoder
 const int encoderpin1 = 2; //This is the Interrupt Pin
 const int encoderpin2 = 4; //This Pin is a normal Pin read upon Interrupt
-int encoderpin2Val = 0; //Value of the encoder pin (0 or 1), this pin is read in the interrupt
-float degrees;
+int encoderpin2Val; //Value of the encoder pin (0 or 1), this pin is read in the interrupt
+float degrees=0;
+int old = 0;
 
 //Motor Driver
 const int PWMpin = 3; 
-int PWMVal;//0-255 PWM value for speed
 const int MotorA = 5;
 const int MotorB = 6;
 
@@ -31,50 +31,55 @@ void EncoderCheck(){
 
   encoderpin2Val = digitalRead(encoderpin2);
 
-  if(encoderpin2Val == 0) //CW
-  {
-    accmotorpos++;  
-  }
-  else // CCW
-  {
-    accmotorpos--;
-  }
+  if(digitalRead(encoderpin1) == HIGH){
+    if(encoderpin2Val == 0) //CCW
+    {
+      accmotorpos--;   
+    }
+    else // CW
+    {
+      accmotorpos++;
+    }
 
+  }
+  
   degrees = (accmotorpos % FIT0186CPR) * (360.0 / FIT0186CPR); //Calculate Degrees of Rotation 
+
 }
 
 
-void DriveMotor(int dir, int IN1,int IN2, float set) {
+void DriveMotor(int dir,float set, int PWMVal) {
   
   if (dir==1){
-     
-    //while(degrees <= set){
-      digitalWrite(IN1, HIGH);
-      digitalWrite(IN2, LOW);
-      PWMVal = map(degrees,0,set,255,0);
+    Serial.println("Counter-Clockwise");
+    while(degrees >= set){
+      digitalWrite(MotorA, HIGH);
+      digitalWrite(MotorB, LOW);
       analogWrite(PWMpin, PWMVal); // Sets PWM/Speed of Motor
       Serial.print("Encoder Count: ");
       Serial.println(degrees);
-    //}
+    }
    }
 
   else if(dir==2){
-     
-    // while(degrees >= set){
-      digitalWrite(IN1, LOW);
-      digitalWrite(IN2, HIGH);
-      PWMVal = map(degrees,0,set,0,255);
-      analogWrite(PWMpin, PWMVal); // Sets PWM/Speed of Motor      
+    
+    Serial.println("Clockwise");
+    while(degrees <= set){
+      digitalWrite(MotorA, LOW);
+      digitalWrite(MotorB, HIGH);
+      analogWrite(PWMpin, PWMVal); // Sets PWM/Speed of Motor
       Serial.print("Encoder Count: ");
-      Serial.println(degrees);
-    //}
+      Serial.println(degrees);      
+    }  
   }
   else
   { 
       analogWrite(PWMpin, 0);
-      digitalWrite(IN1, LOW);
-      digitalWrite(IN2, LOW);
+      digitalWrite(MotorA, LOW);
+      digitalWrite(MotorB, LOW);
   }
+
+  old = set;
 
 }
 
@@ -82,7 +87,7 @@ void setup() {
 
   Serial.begin(9600);
   
- 
+  delay(1000); // To stop motor from Moving upon startup
   // Set motor pins as outputs
   pinMode(MotorA, OUTPUT);
   pinMode(MotorB, OUTPUT);
@@ -90,6 +95,8 @@ void setup() {
   // Set encoder pins as inputs
   pinMode(encoderpin1,INPUT);
   pinMode(encoderpin2,INPUT);
+
+
 
   // Attach interrup to encoderpin1
   attachInterrupt(digitalPinToInterrupt(encoderpin1),EncoderCheck,RISING);
@@ -99,14 +106,19 @@ void setup() {
 
 void loop() {
 
+ 
   if (Serial.available() > 0) {
     // Read the first integer input
     input1 = Serial.parseInt();
-  
+ 
+    if (input1 >= 0) {
+      DriveMotor(2, input1, 70); // Clockwise
+    } else {
+      DriveMotor(1, -input1, 70); // Counter-Clockwise (make the input positive for control)
+    }
 
-    DriveMotor(1, MotorA, MotorB, input1);
-    delay(100);
-    
+    DriveMotor(0,0,0);
+
   }
 
 }
