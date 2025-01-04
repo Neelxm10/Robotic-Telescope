@@ -6,10 +6,6 @@
 
 //Input and output Pins
 
-//User Input
-int input1 = 0;  // First numerical input
-int input2 = 0;  // Second numerical input
-
 //Motor Encoder
 const int encoderpin1 = 2; //This is the Interrupt Pin
 const int encoderpin2 = 4; //This Pin is a normal Pin read upon Interrupt
@@ -56,9 +52,10 @@ void DriveMotor(int dir,float set, int PWMVal) {
       digitalWrite(MotorA, HIGH);
       digitalWrite(MotorB, LOW);
       analogWrite(PWMpin, PWMVal); // Sets PWM/Speed of Motor
-      Serial.print("Encoder Count: ");
-      Serial.println(degrees);
+      //Serial.print("Encoder Count: ");
+      //Serial.println(degrees);
     }
+   
    }
 
   else if(dir==2){
@@ -68,9 +65,10 @@ void DriveMotor(int dir,float set, int PWMVal) {
       digitalWrite(MotorA, LOW);
       digitalWrite(MotorB, HIGH);
       analogWrite(PWMpin, PWMVal); // Sets PWM/Speed of Motor
-      Serial.print("Encoder Count: ");
-      Serial.println(degrees);      
-    }  
+      //Serial.print("Encoder Count: ");
+      //Serial.println(degrees);      
+    } 
+
   }
   else
   { 
@@ -108,14 +106,18 @@ void loop() {
 
  
   if (Serial.available() > 0) {
+    
     // Read the first integer input
+    int input1 = 0;  // First numerical input
     input1 = Serial.parseInt();
  
     if (input1 >= 0) {
       DriveMotor(2, input1, 70); // Clockwise
     } else {
-      DriveMotor(1, -input1, 70); // Counter-Clockwise (make the input positive for control)
+      DriveMotor(1, -input1, 70); // Counter-Clockwise (make the input positive for control)   
     }
+
+
 
     DriveMotor(0,0,0);
 
