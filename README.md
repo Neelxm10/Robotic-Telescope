@@ -1,2 +1,15 @@
 # Robotic-Telescope
-This repository  contains all source files pertaining to the robotic telescope. This includes control software, image processing software, and User Interface software.
+
+Raspberri Pi IP adress 
+
+10.0.0.54
+
+
+For SSH use command
+
+ssh michele@10.0.0.54
+
+
+Use this Command to Check Serial Port for Arduino on Raspberri Pi
+
+/sys/class/tty
