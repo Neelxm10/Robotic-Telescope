@@ -1,6 +1,6 @@
 import serial
 
-port = "/dev/ttyACM7"
+port = "/dev/ttyACM7" #Use Command /sys/class/tty to find AMC
 baudrate = 9600
 
 ser = serial.Serial(port,baudrate)
