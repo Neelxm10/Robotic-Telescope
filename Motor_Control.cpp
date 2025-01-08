@@ -11,7 +11,6 @@ const int encoderpin1 = 2; //This is the Interrupt Pin
 const int encoderpin2 = 4; //This Pin is a normal Pin read upon Interrupt
 int encoderpin2Val; //Value of the encoder pin (0 or 1), this pin is read in the interrupt
 float degrees=0;
-int old = 0;
 
 //Motor Driver
 const int PWMpin = 3; 
@@ -47,28 +46,28 @@ void EncoderCheck(){
 void DriveMotor(int dir,float set, int PWMVal) {
   
   if (dir==1){
-    Serial.println("Counter-Clockwise");
+    
     while(degrees >= set){
       digitalWrite(MotorA, HIGH);
       digitalWrite(MotorB, LOW);
       analogWrite(PWMpin, PWMVal); // Sets PWM/Speed of Motor
-      //Serial.print("Encoder Count: ");
-      //Serial.println(degrees);
+      Serial.print("POS:");
+      Serial.println(degrees);
+      delay(100);
     }
-   
    }
 
   else if(dir==2){
     
-    Serial.println("Clockwise");
+   
     while(degrees <= set){
       digitalWrite(MotorA, LOW);
       digitalWrite(MotorB, HIGH);
       analogWrite(PWMpin, PWMVal); // Sets PWM/Speed of Motor
-      //Serial.print("Encoder Count: ");
-      //Serial.println(degrees);      
+      Serial.print("POS:");
+      Serial.println(degrees);
+      delay(100);    
     } 
-
   }
   else
   { 
@@ -77,13 +76,13 @@ void DriveMotor(int dir,float set, int PWMVal) {
       digitalWrite(MotorB, LOW);
   }
 
-  old = set;
+  Serial.flush(); 
 
 }
 
 void setup() {
 
-  Serial.begin(9600);
+  Serial.begin(115200);
   
   delay(1000); // To stop motor from Moving upon startup
   // Set motor pins as outputs
@@ -103,6 +102,9 @@ void setup() {
 }
 
 void loop() {
+
+
+  static unsigned long lastUpdate = 0;
 
  
   if (Serial.available() > 0) {
