@@ -102,28 +102,19 @@ void setup() {
 }
 
 void loop() {
-
-
-  static unsigned long lastUpdate = 0;
-
  
-  if (Serial.available() > 0) {
-    
-    // Read the first integer input
-    int input1 = 0;  // First numerical input
-    input1 = Serial.parseInt();
- 
-    if (input1 >= 0) {
-      DriveMotor(2, input1, 70); // Clockwise
+if (Serial.available() > 0) {
+    String input = Serial.readStringUntil('\n');  // Read the entire input
+    input.trim();  // Remove any extra whitespace/newlines
+
+    // Process position input
+    int inputPos = input.toInt();
+    if (inputPos >= 0) {
+        DriveMotor(2, inputPos, 70); // Clockwise
     } else {
-      DriveMotor(1, -input1, 70); // Counter-Clockwise (make the input positive for control)   
+        DriveMotor(1, -inputPos, 70); // Counter-Clockwise (absolute value)
     }
 
-
-
     DriveMotor(0,0,0);
-
-  }
-
 }
-
+}
