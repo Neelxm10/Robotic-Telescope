@@ -10,7 +10,11 @@
 const int encoderpin1 = 2; //This is the Interrupt Pin
 const int encoderpin2 = 4; //This Pin is a normal Pin read upon Interrupt
 int encoderpin2Val; //Value of the encoder pin (0 or 1), this pin is read in the interrupt
-float degrees=0;
+float degrees= 0;
+int inputPos = 0;
+uint8_t direction;
+bool done = 0;
+float tolerance = 15;
 
 //Motor Driver
 const int PWMpin = 3; 
@@ -43,17 +47,16 @@ void EncoderCheck(){
 }
 
 
-void DriveMotor(int dir,float set, int PWMVal) {
-  
+void DriveMotor(int dir, float set, int PWMVal) {
+   
   if (dir==1){
     
     while(degrees >= set){
       digitalWrite(MotorA, HIGH);
       digitalWrite(MotorB, LOW);
       analogWrite(PWMpin, PWMVal); // Sets PWM/Speed of Motor
-      Serial.print("POS:");
-      Serial.println(degrees);
       delay(100);
+      done = 1;
     }
    }
 
@@ -64,9 +67,8 @@ void DriveMotor(int dir,float set, int PWMVal) {
       digitalWrite(MotorA, LOW);
       digitalWrite(MotorB, HIGH);
       analogWrite(PWMpin, PWMVal); // Sets PWM/Speed of Motor
-      Serial.print("POS:");
-      Serial.println(degrees);
-      delay(100);    
+      delay(100); 
+      done = 1;   
     } 
   }
   else
@@ -76,9 +78,65 @@ void DriveMotor(int dir,float set, int PWMVal) {
       digitalWrite(MotorB, LOW);
   }
 
-  Serial.flush(); 
+  
 
 }
+
+
+
+void ReadData(){
+
+  if (Serial.available() > 0) {
+
+    uint8_t Pi_length = Serial.read();
+    
+    // Read Command ID
+    uint8_t Pi_command_id = Serial.read();
+    
+    // Calculate payload size
+    uint8_t Pi_payload_size = Pi_length - 3;  // Length minus Command ID and checksum and direction
+    
+    //Read Direction
+    uint8_t Pi_Direction = Serial.read();
+
+    // Read payload
+    uint8_t Pi_payload_high = Serial.read();  // High byte of payload
+    uint8_t Pi_payload_low = Serial.read();   // Low byte of payload
+    
+    // Read checksum
+    uint8_t Pi_received_checksum = Serial.read();
+    
+    // Calculate checksum for validation
+    uint8_t Pi_calculated_checksum = (Pi_length + Pi_command_id + Pi_Direction + Pi_payload_high + Pi_payload_low) & 0xFF;
+    
+    // Validate checksum
+    if (Pi_received_checksum == Pi_calculated_checksum) {
+      inputPos  = (Pi_payload_high << 8) | Pi_payload_low;
+      direction = Pi_Direction; 
+    }
+  }
+
+}
+
+
+
+void sendData(uint8_t Arduino_commandID, uint8_t *Arduino_payload, uint8_t Arduino_payloadSize) {
+    
+    Serial.write(0xAA);                // Start byte
+    Serial.write(Arduino_payloadSize + 2);     // Data length (commandID + payload)
+    Serial.write(Arduino_commandID);           // Command ID
+    for (int i = 0; i < Arduino_payloadSize; i++) {
+        Serial.write(Arduino_payload[i]);      // Payload data
+    }
+    uint8_t Arduino_checksum = Arduino_commandID;      // Basic checksum
+    for (int i = 0; i < Arduino_payloadSize; i++) {
+        Arduino_checksum += Arduino_payload[i];
+    }
+    Serial.write(Arduino_checksum & 0xFF);     // Append checksum
+    Serial.flush(); 
+}
+
+
 
 void setup() {
 
@@ -102,19 +160,31 @@ void setup() {
 }
 
 void loop() {
- 
-if (Serial.available() > 0) {
-    String input = Serial.readStringUntil('\n');  // Read the entire input
-    input.trim();  // Remove any extra whitespace/newlines
+  
+  uint8_t Arduino_commandID = 0x01;  // Command ID for temperature reading
+  uint8_t Arduino_payload[2];        // Payload: 2 bytes for temperature (e.g., 23.5°C)
+  float temperature = 23.5;  // Example temperature
+  int tempInt = (int)(temperature * 10);  // Convert to integer (e.g., 23.5 -> 235)
+  Arduino_payload[0] = (tempInt >> 8) & 0xFF;     // High byte
+  Arduino_payload[1] = tempInt & 0xFF;  
 
-    // Process position input
-    int inputPos = input.toInt();
-    if (inputPos >= 0) {
-        DriveMotor(2, inputPos, 70); // Clockwise
-    } else {
-        DriveMotor(1, -inputPos, 70); // Counter-Clockwise (absolute value)
-    }
+  
+  ReadData();
 
+  if (direction == 0x02) {
+      DriveMotor(2, inputPos, 100); // Clockwise
+  } else if (direction == 0x03){
+      DriveMotor(1, -inputPos, 100); // Counter-Clockwise (absolute value)
+  }
+  else{
     DriveMotor(0,0,0);
+  }
+
+
+  DriveMotor(0,0,0);
+  
+  if(done == 1){
+    sendData(Arduino_commandID, Arduino_payload, 2); 
+  }  
 }
-}
+
