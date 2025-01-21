@@ -51,21 +51,8 @@ void DriveMotor(int dir, float set, int PWMVal) {
     unsigned long startTime = millis(); // Record the start time
     unsigned long timeout = 5000;       // Set a timeout (e.g., 5 seconds)
 
-    if (dir == 1) { // Clockwise
-        while (degrees > set) {
-            // Check for timeout to prevent infinite loops
-            if (millis() - startTime > timeout) {
-                Serial.println("Timeout: CW movement took too long.");
-                break;
-            }
-
-            digitalWrite(MotorA, HIGH);
-            digitalWrite(MotorB, LOW);
-            analogWrite(PWMpin, PWMVal);
-            delay(10); // Small delay to reduce CPU load
-        }
-    } else if (dir == 2) { // Counter-Clockwise
-        while (degrees < set) {
+    if (dir == 1) { // Counter-Clockwise (CCW)
+        while (degrees < set) { // Adjust condition to rotate until target is reached
             // Check for timeout to prevent infinite loops
             if (millis() - startTime > timeout) {
                 Serial.println("Timeout: CCW movement took too long.");
@@ -77,6 +64,19 @@ void DriveMotor(int dir, float set, int PWMVal) {
             analogWrite(PWMpin, PWMVal);
             delay(10); // Small delay to reduce CPU load
         }
+    } else if (dir == 2) { // Clockwise (CW)
+        while (degrees > set) { // Adjust condition to rotate until target is reached
+            // Check for timeout to prevent infinite loops
+            if (millis() - startTime > timeout) {
+                Serial.println("Timeout: CW movement took too long.");
+                break;
+            }
+
+            digitalWrite(MotorA, HIGH);
+            digitalWrite(MotorB, LOW);
+            analogWrite(PWMpin, PWMVal);
+            delay(10); // Small delay to reduce CPU load
+        }
     }
 
     // Stop the motor once the target is reached
@@ -85,7 +85,6 @@ void DriveMotor(int dir, float set, int PWMVal) {
     digitalWrite(MotorB, LOW);
     done = 1; // Mark movement as done
 }
-
 
 
 
