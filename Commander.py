@@ -1,26 +1,19 @@
 import serial
 import time
-from collections import deque
+
 
 
 #################### SET UP ####################
 
 # Serial setup
-port = "/dev/ttyACM16"
+port = "/dev/ttyACM36"
 baudrate = 115200
 ser = serial.Serial(port, baudrate)
+# ser.write(b'\xAA\x03\x00\x00\x00')  # Dummy reset message
 ser.reset_input_buffer()
 cmd_ID = 0x01 #Move Motor Command
 CW = 0x02 # Clock Wise
 CCW = 0x03 #Counter Clock Wise
-
-# Buffer for motor positions
-position_buffer = deque(maxlen=600)  # Store up to 600 positions
-
-# variables
-tolerance = 15
-current_position = 0
-err = 0
 
 ###############################################
 
@@ -91,9 +84,9 @@ send_position(cmd_ID,user_in)
 cmd,payload = read_from_arduino()
 if cmd == 0x01:  # Command ID for temperature reading
         # Convert payload back to temperature (2 bytes -> float)
-        temp_int = (payload[0] << 8) | payload[1]
-        temperature = temp_int / 10.0  # Convert back to float
-        print(f"Received Temperature: {temperature}°C")
+        pos = (payload[0] << 8) | payload[1]
+        motor_pos = pos / 10.0  # Convert back to float
+        print(f"Motor Position: {motor_pos}°")
 
 
 ##################################################

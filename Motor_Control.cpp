@@ -48,39 +48,44 @@ void EncoderCheck(){
 
 
 void DriveMotor(int dir, float set, int PWMVal) {
-   
-  if (dir==1){
-    
-    while(degrees >= set){
-      digitalWrite(MotorA, HIGH);
-      digitalWrite(MotorB, LOW);
-      analogWrite(PWMpin, PWMVal); // Sets PWM/Speed of Motor
-      delay(100);
-      done = 1;
+    unsigned long startTime = millis(); // Record the start time
+    unsigned long timeout = 5000;       // Set a timeout (e.g., 5 seconds)
+
+    if (dir == 1) { // Clockwise
+        while (degrees > set) {
+            // Check for timeout to prevent infinite loops
+            if (millis() - startTime > timeout) {
+                Serial.println("Timeout: CW movement took too long.");
+                break;
+            }
+
+            digitalWrite(MotorA, HIGH);
+            digitalWrite(MotorB, LOW);
+            analogWrite(PWMpin, PWMVal);
+            delay(10); // Small delay to reduce CPU load
+        }
+    } else if (dir == 2) { // Counter-Clockwise
+        while (degrees < set) {
+            // Check for timeout to prevent infinite loops
+            if (millis() - startTime > timeout) {
+                Serial.println("Timeout: CCW movement took too long.");
+                break;
+            }
+
+            digitalWrite(MotorA, LOW);
+            digitalWrite(MotorB, HIGH);
+            analogWrite(PWMpin, PWMVal);
+            delay(10); // Small delay to reduce CPU load
+        }
     }
-   }
 
-  else if(dir==2){
-    
-   
-    while(degrees <= set){
-      digitalWrite(MotorA, LOW);
-      digitalWrite(MotorB, HIGH);
-      analogWrite(PWMpin, PWMVal); // Sets PWM/Speed of Motor
-      delay(100); 
-      done = 1;   
-    } 
-  }
-  else
-  { 
-      analogWrite(PWMpin, 0);
-      digitalWrite(MotorA, LOW);
-      digitalWrite(MotorB, LOW);
-  }
-
-  
-
+    // Stop the motor once the target is reached
+    analogWrite(PWMpin, 0);
+    digitalWrite(MotorA, LOW);
+    digitalWrite(MotorB, LOW);
+    done = 1; // Mark movement as done
 }
+
 
 
 
@@ -116,6 +121,8 @@ void ReadData(){
     }
   }
 
+  Serial.flush(); 
+
 }
 
 
@@ -141,6 +148,9 @@ void sendData(uint8_t Arduino_commandID, uint8_t *Arduino_payload, uint8_t Ardui
 void setup() {
 
   Serial.begin(115200);
+
+  accmotorpos = 0;
+  degrees = 0;
   
   delay(1000); // To stop motor from Moving upon startup
   // Set motor pins as outputs
@@ -160,31 +170,31 @@ void setup() {
 }
 
 void loop() {
-  
-  uint8_t Arduino_commandID = 0x01;  // Command ID for temperature reading
-  uint8_t Arduino_payload[2];        // Payload: 2 bytes for temperature (e.g., 23.5°C)
-  float temperature = 23.5;  // Example temperature
-  int tempInt = (int)(temperature * 10);  // Convert to integer (e.g., 23.5 -> 235)
-  Arduino_payload[0] = (tempInt >> 8) & 0xFF;     // High byte
-  Arduino_payload[1] = tempInt & 0xFF;  
-
-  
+     
   ReadData();
 
   if (direction == 0x02) {
-      DriveMotor(2, inputPos, 100); // Clockwise
+      DriveMotor(2, inputPos, 70); // Clockwise
   } else if (direction == 0x03){
-      DriveMotor(1, -inputPos, 100); // Counter-Clockwise (absolute value)
+      DriveMotor(1, -inputPos, 70); // Counter-Clockwise (absolute value)
   }
   else{
     DriveMotor(0,0,0);
   }
 
+  uint8_t Arduino_commandID = 0x01;  // Command ID for temperature reading
+  uint8_t Arduino_payload[2];        // Payload: 2 bytes for temperature (e.g., 23.5°C)
+  float pos = degrees;  // Example temperature
+  int pos_int = (int)(pos * 10);  // Convert to integer (e.g., 23.5 -> 235)
+  Arduino_payload[0] = (pos_int >> 8) & 0xFF;     // High byte
+  Arduino_payload[1] = pos_int & 0xFF; 
 
   DriveMotor(0,0,0);
   
   if(done == 1){
+    
     sendData(Arduino_commandID, Arduino_payload, 2); 
+    direction = 0;
+    done = 0;
   }  
 }
-
