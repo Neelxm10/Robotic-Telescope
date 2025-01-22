@@ -6,11 +6,16 @@ import time
 #################### SET UP ####################
 
 # Serial setup
-port = "/dev/ttyACM36"
+port = "/dev/ttyACM2"
 baudrate = 115200
 ser = serial.Serial(port, baudrate)
-# ser.write(b'\xAA\x03\x00\x00\x00')  # Dummy reset message
+
+# Clear the input buffer (received data)
 ser.reset_input_buffer()
+
+# Clear the output buffer (data waiting to be sent)
+ser.reset_output_buffer()
+
 cmd_ID = 0x01 #Move Motor Command
 CW = 0x02 # Clock Wise
 CCW = 0x03 #Counter Clock Wise
