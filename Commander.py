@@ -6,7 +6,7 @@ import time
 #################### SET UP ####################
 
 # Serial setup
-port = "/dev/ttyACM2"
+port = "/dev/ttyACM0"
 baudrate = 115200
 ser = serial.Serial(port, baudrate)
 
@@ -33,7 +33,7 @@ def send_position(Pi_cmd,Pi_payload): #Serial Message Function
    highbyte = Pi_payload >> 8 & 0xFF # High byte
    lowbyte = Pi_payload & 0xFF #Low Byte
    Pi_payload = [highbyte,lowbyte]
-   Pi_direction = CW
+   Pi_direction = CCW
    Pi_length = 1 + 1 + len(Pi_payload) + 1 + 1 # command_id + Direction + payload + checksum
    Pi_checksum = (Pi_length + Pi_cmd + sum(Pi_payload) + Pi_direction) & 0xFF
    
