@@ -2,13 +2,45 @@ import sys
 import requests
 from PyQt5.QtWidgets import QApplication, QLineEdit, QPushButton, QLabel
 from PyQt5.QtCore import pyqtSignal, QThread, QObject
-from PyQt5.QtTest import QTest
+import time
 import logging
-import socket
-from threading import Thread
-from bitstring import ConstBitStream
 
 logging.basicConfig(level=logging.DEBUG)
+
+
+class CoordinateFetcher(QObject):
+    coordinates_updated = pyqtSignal(float, float)  # Signal to send updated coordinates
+    error_occurred = pyqtSignal(str)  # Signal for errors
+    stop_thread = pyqtSignal()  # Signal to stop the thread
+
+    def __init__(self, object_name):
+        super().__init__()
+        self.object_name = object_name
+        self.running = True
+
+    def fetch_coordinates(self):
+        try:
+            while self.running:
+                url = f"http://localhost:8090/api/objects/info?name={self.object_name}&format=json"
+                response = requests.get(url)
+
+                if response.status_code != 200:
+                    raise Exception(f"Failed to connect to Stellarium: {response.status_code}")
+
+                data = response.json()
+                if 'error' in data:
+                    raise Exception(f"Object not found: {data['error']}")
+
+                azimuth = data['azimuth']
+                altitude = data['altitude']
+
+                self.coordinates_updated.emit(azimuth, altitude)
+                time.sleep(1)  # Fetch updates every second
+        except Exception as e:
+            self.error_occurred.emit(str(e))
+
+    def stop(self):
+        self.running = False
 
 
 class MainWindow(QLabel):
@@ -25,36 +57,58 @@ class MainWindow(QLabel):
         # Button to fetch object coordinates
         self.search_button = QPushButton("Search", self)
         self.search_button.setGeometry(270, 50, 80, 30)
-        self.search_button.clicked.connect(self.fetch_object_coordinates)
+        self.search_button.clicked.connect(self.start_fetching)
 
         # Label to display azimuth and altitude
         self.output_label = QLabel(self)
         self.output_label.setGeometry(10, 100, 350, 30)
         self.output_label.setText("Azimuth: N/A, Altitude: N/A")
 
-    def fetch_object_coordinates(self):
+        # Thread and worker
+        self.thread = None
+        self.worker = None
+
+    def start_fetching(self):
         object_name = self.object_name_input.text().strip()
-        if object_name:
-            try:
-                az, alt = self.query_stellarium(object_name)
-                self.output_label.setText(f"Azimuth: {az:.2f}, Altitude: {alt:.2f}")
-            except Exception as e:
-                self.output_label.setText(f"Error: {str(e)}")
+        if not object_name:
+            self.output_label.setText("Error: Please enter a celestial object name.")
+            return
 
-    def query_stellarium(self, object_name):
-        url = f"http://localhost:8090/api/objects/info?name={object_name}&format=json"
-        response = requests.get(url)
+        # Stop any existing thread
+        if self.thread and self.thread.isRunning():
+            self.stop_fetching()
 
-        if response.status_code != 200:
-            raise Exception(f"Failed to connect to Stellarium: {response.status_code}")
+        # Set up the thread and worker
+        self.thread = QThread()
+        self.worker = CoordinateFetcher(object_name)
+        self.worker.moveToThread(self.thread)
 
-        data = response.json()
-        if 'error' in data:
-            raise Exception(f"Object not found: {data['error']}")
+        # Connect signals and slots
+        self.worker.coordinates_updated.connect(self.update_coordinates)
+        self.worker.error_occurred.connect(self.handle_error)
+        self.thread.started.connect(self.worker.fetch_coordinates)
+        self.worker.stop_thread.connect(self.thread.quit)
 
-        azimuth = data['azimuth']
-        altitude = data['altitude']
-        return azimuth, altitude
+        # Start the thread
+        self.thread.start()
+
+    def update_coordinates(self, azimuth, altitude):
+        self.output_label.setText(f"Azimuth: {azimuth:.2f}, Altitude: {altitude:.2f}")
+
+    def handle_error(self, error_message):
+        self.output_label.setText(f"Error: {error_message}")
+        self.stop_fetching()
+
+    def stop_fetching(self):
+        if self.worker:
+            self.worker.stop()
+        if self.thread:
+            self.thread.quit()
+            self.thread.wait()
+
+    def closeEvent(self, event):
+        self.stop_fetching()
+        event.accept()
 
 
 if __name__ == "__main__":
