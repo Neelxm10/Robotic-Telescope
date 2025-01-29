@@ -11,8 +11,6 @@ class SerialMessenger:
 
         # Message parameters
         self.cmd_ID = 0x01  # Move Motor Command
-        self.CW = 0x02  # Clockwise
-        self.CCW = 0x03  # Counterclockwise
         self.encoder_buffer = deque(maxlen=max_buffer_size)  # Store encoder data
 
         # Threading and control variables
@@ -23,10 +21,8 @@ class SerialMessenger:
         self.read_thread = threading.Thread(target=self._read_encoder_data, daemon=True)
         self.read_thread.start()
 
-    def send_position(self, command_id, position, direction=None):
+    def send_position(self, command_id, position):
         """Sends a position command to the serial device."""
-        # if direction is None:
-        #     direction = self.CW  # Default to Clockwise
 
         # Prepare the payload
         highbyte = (position >> 8) & 0xFF
@@ -34,7 +30,7 @@ class SerialMessenger:
         payload = [highbyte, lowbyte]
 
         # Calculate the message length and checksum
-        length = 1 + len(payload) + 1 + 1  # cmd_id + direction + payload + checksum
+        length = 1 + len(payload) + 1 # cmd_id + payload + checksum
         checksum = (length + command_id + sum(payload)) & 0xFF
 
         # Construct the message
@@ -78,6 +74,8 @@ class SerialMessenger:
         """Stops the read thread and closes the serial connection."""
         self.running = False
         self.read_thread.join()
+        self.ser.reset_output_buffer()
+        self.ser.reset_input_buffer()
         self.ser.close()
 
 
@@ -107,9 +105,11 @@ if __name__ == "__main__":
             if latest_position is not None:
                 print(f"Latest encoder position: {latest_position}")
             time.sleep(0.5)
+            
 
     except KeyboardInterrupt:
         print("Exiting program.")
 
+       
     finally:
         messenger.stop()

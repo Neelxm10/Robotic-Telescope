@@ -10,10 +10,10 @@
 const int encoderpin1 = 2; //This is the Interrupt Pin
 const int encoderpin2 = 4; //This Pin is a normal Pin read upon Interrupt
 int encoderpin2Val; //Value of the encoder pin (0 or 1), this pin is read in the interrupt
-int inputPos = 0;
+int inputPos;
 int pwmValue = 0;
-int degrees = 0;
-int current_pos = 0;
+int degrees;
+int current_pos;
 bool done = 0;
 
 //Motor Driver
@@ -64,9 +64,9 @@ void DriveMotor(int dir, int PWMVal) {
   if (dir==1){ //Counter Clockwise
       digitalWrite(MotorA, HIGH);
       digitalWrite(MotorB, LOW);
-      digitalWrite(PWMpin, PWMVal); 
+      analogWrite(PWMpin, PWMVal); 
 
-    if (current_pos == inputPos*0.8){
+    if (current_pos <= inputPos*0.8){
       done = 1;
    
     }
@@ -75,9 +75,9 @@ void DriveMotor(int dir, int PWMVal) {
   else if(dir==2){ //Clockwise
       digitalWrite(MotorA, LOW);
       digitalWrite(MotorB, HIGH);
-      digitalWrite(PWMpin, PWMVal);
+      analogWrite(PWMpin, PWMVal);
 
-  if (current_pos == inputPos*0.8){
+  if (current_pos >= inputPos*0.8){
       done = 1;
    
     }
@@ -93,7 +93,8 @@ else if(dir == 0){
 
 
 void ReadData() {
-    if (Serial.available() > 0) {
+
+    if (Serial.available() > 4) {
         uint8_t Pi_length = Serial.read();
         
         // Read Command ID
@@ -117,12 +118,11 @@ void ReadData() {
             // Combine high and low bytes into a single integer
             inputPos = (Pi_payload_high << 8) | Pi_payload_low;
             
-            
         }
+
+        Serial.flush();
+
     }
-
-    Serial.flush();
-
   }
 
 
@@ -145,11 +145,10 @@ void sendData(uint8_t Arduino_commandID, uint8_t *Arduino_payload, uint8_t Ardui
 } 
 
 
-
 void setup() {
 
   Serial.begin(115200);
-
+  
   accmotorpos = 0;
   degrees = 0;
   
@@ -162,8 +161,6 @@ void setup() {
   pinMode(encoderpin1,INPUT);
   pinMode(encoderpin2,INPUT);
 
-
-
   // Attach interrup to encoderpin1
   attachInterrupt(digitalPinToInterrupt(encoderpin1),EncoderCheck,RISING);
 
@@ -173,17 +170,16 @@ void setup() {
 void loop() {
      
   ReadData();
-
-  
+ 
   if (inputPos > current_pos) {
-      pwmValue = map((current_pos-inputPos),0,360,0,255);
+      pwmValue = map((abs(current_pos-inputPos)),0,360,50,255);
       DriveMotor(2,pwmValue); // Clockwise
   } else if (inputPos < current_pos){
-      pwmValue = map((current_pos-inputPos),0,360,0,255);
+      pwmValue = map((abs(current_pos-inputPos)),0,360,50,255);
       DriveMotor(1,pwmValue); // Counter-Clockwise (absolute value)
   }
   else{
-    DriveMotor(0,0);
+      DriveMotor(0,0);
   }
 
   
